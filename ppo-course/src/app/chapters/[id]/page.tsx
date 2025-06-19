@@ -257,7 +257,7 @@ Mathematically:
 **V^π(s) = E[G_t | S_t = s]**
 
 Where G_t is the return from time t:
-**G_t = R_{t+1} + γR_{t+2} + γ²R_{t+3} + ... = Σ_{k=0}^∞ γ^k R_{t+k+1}**
+**G_t = R_(t+1) + γR_(t+2) + γ²R_(t+3) + ... = Σ_(k=0)^∞ γ^k R_(t+k+1)**
 
 Key insights:
 - V(s) tells us "how good" it is to be in state s
@@ -294,13 +294,13 @@ The optimal Q-function Q*(s,a) represents the maximum expected return achievable
 
 **Bellman Expectation Equations:**
 For a given policy π:
-- V^π(s) = Σ_a π(a|s) Σ_{s'} P(s'|s,a)[R(s,a,s') + γV^π(s')]
-- Q^π(s,a) = Σ_{s'} P(s'|s,a)[R(s,a,s') + γΣ_{a'} π(a'|s')Q^π(s',a')]
+- V^π(s) = Σ_a π(a|s) Σ_s' P(s'|s,a)[R(s,a,s') + γV^π(s')]
+- Q^π(s,a) = Σ_s' P(s'|s,a)[R(s,a,s') + γΣ_a' π(a'|s')Q^π(s',a')]
 
 **Bellman Optimality Equations:**
 For the optimal policy π*:
-- V*(s) = max_a Σ_{s'} P(s'|s,a)[R(s,a,s') + γV*(s')]
-- Q*(s,a) = Σ_{s'} P(s'|s,a)[R(s,a,s') + γ max_{a'} Q*(s',a')]
+- V*(s) = max_a Σ_s' P(s'|s,a)[R(s,a,s') + γV*(s')]
+- Q*(s,a) = Σ_s' P(s'|s,a)[R(s,a,s') + γ max_a' Q*(s',a')]
 
 Key insights:
 - Value at current state depends on immediate reward + discounted future value
@@ -428,11 +428,11 @@ Key insights:
 
 **Objective Function:**
 We want to maximize the expected return:
-**J(θ) = E_τ~π_θ[R(τ)] = E_τ~π_θ[Σ_{t=0}^T γ^t r_t]**
+**J(θ) = E_τ~π_θ[R(τ)] = E_τ~π_θ[Σ_(t=0)^T γ^t r_t]**
 
 **The Policy Gradient Theorem:**
 The gradient of J(θ) is:
-**∇_θ J(θ) = E_τ~π_θ[Σ_{t=0}^T ∇_θ log π_θ(a_t|s_t) G_t]**
+**∇_θ J(θ) = E_τ~π_θ[Σ_(t=0)^T ∇_θ log π_θ(a_t|s_t) G_t]**
 
 Where:
 - G_t is the return from time t onward
@@ -461,7 +461,7 @@ We don't need to know the environment dynamics! The gradient only depends on:
    - Update parameters: θ ← θ + α ∇_θ J(θ)
 
 **REINFORCE Update Rule:**
-**θ ← θ + α Σ_{t=0}^T ∇_θ log π_θ(a_t|s_t) G_t**
+**θ ← θ + α Σ_(t=0)^T ∇_θ log π_θ(a_t|s_t) G_t**
 
 **Properties:**
 - Unbiased gradient estimates
@@ -484,7 +484,7 @@ Even if all actions in an episode are good, REINFORCE will increase probabilitie
 
 **Baseline Subtraction:**
 Modify the policy gradient to:
-**∇_θ J(θ) = E_τ~π_θ[Σ_{t=0}^T ∇_θ log π_θ(a_t|s_t) (G_t - b(s_t))]**
+**∇_θ J(θ) = E_τ~π_θ[Σ_(t=0)^T ∇_θ log π_θ(a_t|s_t) (G_t - b(s_t))]**
 
 Where b(s_t) is a baseline that depends only on the state.
 
@@ -512,10 +512,10 @@ This is called the advantage function, measuring how much better an action is co
 
 **Natural Policy Gradient:**
 Instead of steepest descent in parameter space, take steepest descent in policy distribution space:
-**θ_{k+1} = θ_k + α F^{-1} ∇_θ J(θ)**
+**θ_(k+1) = θ_k + α F^(-1) ∇_θ J(θ)**
 
 Where F is the Fisher Information Matrix:
-**F = E_{s~ρ^π, a~π}[∇_θ log π_θ(a|s) ∇_θ log π_θ(a|s)^T]**
+**F = E_[s~ρ^π, a~π][∇_θ log π_θ(a|s) ∇_θ log π_θ(a|s)^T]**
 
 **Benefits:**
 - Invariant to parameterization
@@ -704,23 +704,23 @@ Instead of asynchronous updates, use synchronous updates with parallel environme
 **The Bias-Variance Tradeoff in Advantages:**
 
 **High Variance (Monte Carlo):**
-A^MC = G_t - V(s_t) = Σ_{k=0}^∞ γ^k r_{t+k} - V(s_t)
+A^MC = G_t - V(s_t) = Σ_(k=0)^∞ γ^k r_(t+k) - V(s_t)
 - Unbiased but high variance
 - Uses actual returns
 
 **High Bias (1-step TD):**
-A^TD = r_t + γV(s_{t+1}) - V(s_t)
+A^TD = r_t + γV(s_(t+1)) - V(s_t)
 - Low variance but biased
 - Uses bootstrapped value estimates
 
 **GAE - Best of Both Worlds:**
 GAE uses exponentially weighted average of n-step advantages:
-**A^GAE(γ,λ) = Σ_{l=0}^∞ (γλ)^l δ_{t+l}**
+**A^GAE(γ,λ) = Σ_(l=0)^∞ (γλ)^l δ_(t+l)**
 
-Where δ_t = r_t + γV(s_{t+1}) - V(s_t) is the TD residual.
+Where δ_t = r_t + γV(s_(t+1)) - V(s_t) is the TD residual.
 
 **Expanded Form:**
-A^GAE = δ_t + (γλ)δ_{t+1} + (γλ)²δ_{t+2} + ...
+A^GAE = δ_t + (γλ)δ_(t+1) + (γλ)²δ_(t+2) + ...
 
 **Key Properties:**
 - λ = 0: Reduces to 1-step TD (high bias, low variance)
@@ -979,8 +979,8 @@ for iteration = 1, 2, ... do
   
   # Compute advantages
   for t in [T-1, T-2, ..., 0] do
-    δ_t = r_t + γ * V(s_{t+1}) - V(s_t)
-    A_t = δ_t + (γλ) * A_{t+1}
+    δ_t = r_t + γ * V(s_(t+1)) - V(s_t)
+    A_t = δ_t + (γλ) * A_(t+1)
   
   # Normalize advantages
   A = (A - mean(A)) / (std(A) + ε)
@@ -2395,7 +2395,7 @@ def boltzmann_exploration(q_values, temperature=1.0):
                 <div className="bg-gray-100 rounded-lg p-4 mb-6 font-mono">
                   <p className="mb-2">Value Function Definition:</p>
                   <p className="mb-1">V^π(s) = E[G_t | S_t = s]</p>
-                  <p className="mb-1">G_t = R_{t+1} + γR_{t+2} + γ²R_{t+3} + ...</p>
+                  <p className="mb-1">G_t = R_(t+1) + γR_(t+2) + γ²R_(t+3) + ...</p>
                   <p>where γ ∈ [0,1] is the discount factor</p>
                 </div>
 
@@ -2709,7 +2709,7 @@ class PolicyBasedAgent:
                 <div className="bg-gray-100 rounded-lg p-4 mb-6 font-mono text-sm">
                   <p className="mb-2 font-bold">Policy Gradient Theorem:</p>
                   <p className="mb-1">∇_θ J(θ) = E_τ~π_θ[Σ_t ∇_θ log π_θ(a_t|s_t) G_t]</p>
-                  <p className="mb-3">where G_t = Σ_{k=t}^T γ^{k-t} r_k</p>
+                  <p className="mb-3">where G_t = Σ_(k=t)^T γ^(k-t) r_k</p>
                   
                   <p className="mb-2 font-bold">Log-derivative trick:</p>
                   <p className="mb-1">∇_θ π_θ(a|s) = π_θ(a|s) ∇_θ log π_θ(a|s)</p>
@@ -3007,7 +3007,7 @@ def standard_pg_update(theta, grad, lr):
 
 # Natural Policy Gradient
 def natural_pg_update(theta, grad, fisher_matrix, lr):
-    # F^{-1} accounts for parameter space geometry
+    # F^(-1) accounts for parameter space geometry
     natural_grad = np.linalg.inv(fisher_matrix) @ grad
     return theta + lr * natural_grad
 
@@ -3448,9 +3448,9 @@ class ParallelA2C:
               <>
                 <div className="bg-gray-100 rounded-lg p-4 mb-6 font-mono text-sm">
                   <p className="mb-2 font-bold">GAE Formula:</p>
-                  <p className="mb-1">δ_t = r_t + γV(s_{t+1}) - V(s_t)</p>
-                  <p className="mb-1">A^GAE_t = δ_t + (γλ)δ_{t+1} + (γλ)²δ_{t+2} + ...</p>
-                  <p>= Σ_{l=0}^∞ (γλ)^l δ_{t+l}</p>
+                  <p className="mb-1">δ_t = r_t + γV(s_(t+1)) - V(s_t)</p>
+                  <p className="mb-1">A^GAE_t = δ_t + (γλ)δ_(t+1) + (γλ)²δ_(t+2) + ...</p>
+                  <p>= Σ_(l=0)^∞ (γλ)^l δ_(t+l)</p>
                 </div>
 
                 <CodeExample
@@ -3464,7 +3464,7 @@ def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
     Args:
         rewards: list of rewards for each timestep
         values: value estimates V(s_t)
-        next_values: value estimates V(s_{t+1})
+        next_values: value estimates V(s_(t+1))
         dones: episode termination flags
         gamma: discount factor
         lam: GAE lambda parameter
@@ -3478,7 +3478,7 @@ def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
     
     # Work backwards through the trajectory
     for t in reversed(range(len(rewards))):
-        # TD residual: δ_t = r_t + γV(s_{t+1}) - V(s_t)
+        # TD residual: δ_t = r_t + γV(s_(t+1)) - V(s_t)
         if t == len(rewards) - 1:
             next_value = next_values[t]
         else:
@@ -3486,7 +3486,7 @@ def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
         
         delta = rewards[t] + gamma * next_value * (1 - dones[t]) - values[t]
         
-        # GAE: A_t = δ_t + (γλ)δ_{t+1} + (γλ)²δ_{t+2} + ...
+        # GAE: A_t = δ_t + (γλ)δ_(t+1) + (γλ)²δ_(t+2) + ...
         gae = delta + gamma * lam * (1 - dones[t]) * gae
         advantages.insert(0, gae)
     
