@@ -1,0 +1,1 @@
+you are designging an RL course, but creashed. read up, and continue. last you were debugging the nextjs applicatio using pupeteer. continue from there. 

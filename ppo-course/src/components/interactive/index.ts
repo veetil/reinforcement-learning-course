@@ -1,0 +1,1 @@
+export { BradleyTerryCalculator } from './BradleyTerryCalculator';

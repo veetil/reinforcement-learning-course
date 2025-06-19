@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPO Course Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .demo-section { margin: 2rem 0; padding: 2rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; }
+        .neural-network { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4rem; padding: 2rem; }
+        .layer { display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+        .neuron { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        .neuron:hover { transform: scale(1.1); }
+        .connection { stroke: #9ca3af; stroke-width: 2; fill: none; }
+        .active-connection { stroke: #3b82f6; stroke-width: 3; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .grid-world { display: grid; grid-template-columns: repeat(5, 60px); gap: 0.5rem; }
+        .grid-cell { width: 60px; height: 60px; border: 1px solid #d1d5db; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .grid-cell:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-full"></div>
+                    <span class="font-bold text-xl">PPO Course</span>
+                </div>
+                <div class="flex space-x-8">
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Home</a>
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Chapters</a>
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Playground</a>
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Assessment</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold mb-8">PPO Interactive Course - Demo</h1>
+
+        <!-- Demo 1: Neural Network Visualizer -->
+        <div class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">1. Neural Network Visualizer</h2>
+            <p class="text-gray-600 mb-6">Interactive visualization showing how data flows through a neural network. Click on neurons to see activation values.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <svg width="100%" height="300" viewBox="0 0 600 300">
+                    <!-- Connections -->
+                    <line class="connection" x1="100" y1="100" x2="300" y2="75" />
+                    <line class="connection active-connection" x1="100" y1="100" x2="300" y2="150" />
+                    <line class="connection" x1="100" y1="200" x2="300" y2="75" />
+                    <line class="connection active-connection" x1="100" y1="200" x2="300" y2="150" />
+                    <line class="connection" x1="300" y1="75" x2="500" y2="150" />
+                    <line class="connection active-connection" x1="300" y1="150" x2="500" y2="150" />
+                    <line class="connection" x1="300" y1="225" x2="500" y2="150" />
+                </svg>
+                
+                <div class="neural-network" style="margin-top: -280px;">
+                    <div class="layer">
+                        <h3 class="text-sm font-semibold mb-2">Input Layer</h3>
+                        <div class="neuron bg-blue-600" onclick="showValue(this, 0.8)">0.8</div>
+                        <div class="neuron bg-blue-600" onclick="showValue(this, 0.3)">0.3</div>
+                    </div>
+                    <div class="layer">
+                        <h3 class="text-sm font-semibold mb-2">Hidden Layer</h3>
+                        <div class="neuron bg-purple-600" onclick="showValue(this, 0.6)">0.6</div>
+                        <div class="neuron bg-purple-600" onclick="showValue(this, 0.9)">0.9</div>
+                        <div class="neuron bg-purple-600" onclick="showValue(this, 0.4)">0.4</div>
+                    </div>
+                    <div class="layer">
+                        <h3 class="text-sm font-semibold mb-2">Output Layer</h3>
+                        <div class="neuron bg-green-600" onclick="showValue(this, 0.7)">0.7</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo 2: PPO Algorithm Stepper -->
+        <div class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">2. PPO Algorithm Stepper</h2>
+            <p class="text-gray-600 mb-6">Step through the PPO algorithm execution with visual feedback at each stage.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-semibold">PPO Training Steps</h3>
+                        <span class="text-sm text-gray-500">Step <span id="current-step">1</span> of 4</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 25%"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="step-indicator active" onclick="goToStep(1)">
+                        <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-medium">1</div>
+                        <p class="text-xs mt-1">Rollout</p>
+                    </div>
+                    <div class="step-indicator" onclick="goToStep(2)">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-medium">2</div>
+                        <p class="text-xs mt-1">Advantage</p>
+                    </div>
+                    <div class="step-indicator" onclick="goToStep(3)">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-medium">3</div>
+                        <p class="text-xs mt-1">Update</p>
+                    </div>
+                    <div class="step-indicator" onclick="goToStep(4)">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-medium">4</div>
+                        <p class="text-xs mt-1">Evaluate</p>
+                    </div>
+                </div>
+
+                <div id="step-content" class="bg-gray-50 rounded-lg p-6 min-h-[200px]">
+                    <h4 class="text-xl font-semibold mb-2">Step 1: Collect Rollouts</h4>
+                    <p class="text-gray-600">The agent interacts with the environment to collect experience data...</p>
+                </div>
+
+                <div class="flex justify-center space-x-4 mt-6">
+                    <button onclick="previousStep()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Previous</button>
+                    <button onclick="togglePlay()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <span id="play-text">Play</span>
+                    </button>
+                    <button onclick="nextStep()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo 3: Interactive Grid World -->
+        <div class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">3. Interactive Grid World</h2>
+            <p class="text-gray-600 mb-6">A simple RL environment where you control an agent (blue) trying to reach the goal (green).</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="text-center mb-4">
+                    <span class="text-2xl font-bold">Score: <span id="score">0</span></span>
+                </div>
+                
+                <div class="grid-world mx-auto" style="width: fit-content;">
+                    <!-- Grid cells will be generated by JavaScript -->
+                </div>
+                
+                <p class="text-center text-sm text-gray-600 mt-4">Click adjacent cells to move the agent</p>
+            </div>
+        </div>
+
+        <!-- Demo 4: Progress Tracking -->
+        <div class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">4. Progress Tracking</h2>
+            <p class="text-gray-600 mb-6">Track your learning progress with visual indicators and achievements.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Your Progress</h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span>Overall Completion</span>
+                            <span>35%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-4">
+                            <div class="bg-blue-600 h-4 rounded-full" style="width: 35%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-medium mb-2">Achievements</h4>
+                        <div class="flex space-x-4">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                    <span class="text-2xl">🏆</span>
+                                </div>
+                                <p class="text-xs mt-1">First Steps</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span class="text-2xl">🧠</span>
+                                </div>
+                                <p class="text-xs mt-1">Quick Learner</p>
+                            </div>
+                            <div class="text-center opacity-50">
+                                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                    <span class="text-2xl">🎯</span>
+                                </div>
+                                <p class="text-xs mt-1">PPO Master</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo 5: Code Playground Preview -->
+        <div class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">5. Code Playground (Preview)</h2>
+            <p class="text-gray-600 mb-6">Write and test PPO implementations with instant feedback.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm">
+                    <pre><code><span class="text-blue-400">import</span> torch
+<span class="text-blue-400">import</span> torch.nn <span class="text-blue-400">as</span> nn
+
+<span class="text-blue-400">class</span> <span class="text-yellow-400">PolicyNetwork</span>(nn.Module):
+    <span class="text-blue-400">def</span> <span class="text-green-400">__init__</span>(<span class="text-orange-400">self</span>, state_dim, action_dim):
+        <span class="text-blue-400">super</span>().__init__()
+        <span class="text-orange-400">self</span>.fc1 = nn.Linear(state_dim, <span class="text-purple-400">64</span>)
+        <span class="text-orange-400">self</span>.fc2 = nn.Linear(<span class="text-purple-400">64</span>, <span class="text-purple-400">64</span>)
+        <span class="text-orange-400">self</span>.fc3 = nn.Linear(<span class="text-purple-400">64</span>, action_dim)
+        
+    <span class="text-blue-400">def</span> <span class="text-green-400">forward</span>(<span class="text-orange-400">self</span>, x):
+        x = torch.relu(<span class="text-orange-400">self</span>.fc1(x))
+        x = torch.relu(<span class="text-orange-400">self</span>.fc2(x))
+        <span class="text-blue-400">return</span> torch.softmax(<span class="text-orange-400">self</span>.fc3(x), dim=-<span class="text-purple-400">1</span>)</code></pre>
+                </div>
+                
+                <div class="mt-4 flex space-x-4">
+                    <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Run Code</button>
+                    <button class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Run Tests</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Grid World Logic
+        let agentPos = { x: 0, y: 0 };
+        let goalPos = { x: 4, y: 4 };
+        let score = 0;
+
+        function initGridWorld() {
+            const grid = document.querySelector('.grid-world');
+            grid.innerHTML = '';
+            
+            for (let y = 0; y < 5; y++) {
+                for (let x = 0; x < 5; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.onclick = () => moveAgent(x, y);
+                    
+                    if (x === agentPos.x && y === agentPos.y) {
+                        cell.classList.add('bg-blue-600', 'text-white');
+                        cell.textContent = 'A';
+                    } else if (x === goalPos.x && y === goalPos.y) {
+                        cell.classList.add('bg-green-600', 'text-white');
+                        cell.textContent = 'G';
+                    }
+                    
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function moveAgent(x, y) {
+            const dx = Math.abs(x - agentPos.x);
+            const dy = Math.abs(y - agentPos.y);
+            
+            // Only allow adjacent moves
+            if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+                const oldDistance = Math.abs(agentPos.x - goalPos.x) + Math.abs(agentPos.y - goalPos.y);
+                const newDistance = Math.abs(x - goalPos.x) + Math.abs(y - goalPos.y);
+                
+                let reward = -1;
+                if (newDistance < oldDistance) reward = 5;
+                if (x === goalPos.x && y === goalPos.y) {
+                    reward = 100;
+                    alert('Goal reached! +100 points!');
+                    // Reset positions
+                    agentPos = { x: 0, y: 0 };
+                    goalPos = { x: Math.floor(Math.random() * 5), y: Math.floor(Math.random() * 5) };
+                } else {
+                    agentPos = { x, y };
+                }
+                
+                score += reward;
+                document.getElementById('score').textContent = score;
+                initGridWorld();
+            }
+        }
+
+        // PPO Stepper Logic
+        let currentStepIndex = 1;
+        let isPlaying = false;
+        const steps = [
+            { title: "Collect Rollouts", content: "The agent interacts with the environment to collect experience data..." },
+            { title: "Calculate Advantages", content: "Compute advantage estimates using GAE for better gradient estimates..." },
+            { title: "Update Policy", content: "Update the policy network using the clipped PPO objective..." },
+            { title: "Evaluate Performance", content: "Test the updated policy and measure improvement..." }
+        ];
+
+        function goToStep(step) {
+            currentStepIndex = step;
+            updateStepper();
+        }
+
+        function nextStep() {
+            if (currentStepIndex < 4) {
+                currentStepIndex++;
+                updateStepper();
+            }
+        }
+
+        function previousStep() {
+            if (currentStepIndex > 1) {
+                currentStepIndex--;
+                updateStepper();
+            }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            document.getElementById('play-text').textContent = isPlaying ? 'Pause' : 'Play';
+            
+            if (isPlaying) {
+                const interval = setInterval(() => {
+                    if (!isPlaying || currentStepIndex === 4) {
+                        clearInterval(interval);
+                        isPlaying = false;
+                        document.getElementById('play-text').textContent = 'Play';
+                        return;
+                    }
+                    nextStep();
+                }, 2000);
+            }
+        }
+
+        function updateStepper() {
+            document.getElementById('current-step').textContent = currentStepIndex;
+            document.getElementById('progress-bar').style.width = (currentStepIndex / 4 * 100) + '%';
+            
+            const stepContent = document.getElementById('step-content');
+            stepContent.innerHTML = `
+                <h4 class="text-xl font-semibold mb-2">Step ${currentStepIndex}: ${steps[currentStepIndex - 1].title}</h4>
+                <p class="text-gray-600">${steps[currentStepIndex - 1].content}</p>
+            `;
+            
+            // Update step indicators
+            document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+                const circle = indicator.querySelector('div');
+                if (index + 1 <= currentStepIndex) {
+                    circle.classList.remove('bg-gray-200', 'text-gray-600');
+                    circle.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    circle.classList.remove('bg-blue-600', 'text-white');
+                    circle.classList.add('bg-gray-200', 'text-gray-600');
+                }
+            });
+        }
+
+        function showValue(element, value) {
+            alert(`Neuron activation value: ${value}`);
+        }
+
+        // Initialize on load
+        initGridWorld();
+        updateStepper();
+    </script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced PPO Course Demo - VERL & RLHF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .demo-section { margin: 2rem 0; padding: 2rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; }
+        .neural-network { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4rem; padding: 2rem; }
+        .layer { display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+        .neuron { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        .neuron:hover { transform: scale(1.1); }
+        .connection { stroke: #9ca3af; stroke-width: 2; fill: none; }
+        .active-connection { stroke: #3b82f6; stroke-width: 3; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .grid-world { display: grid; grid-template-columns: repeat(5, 60px); gap: 0.5rem; }
+        .grid-cell { width: 60px; height: 60px; border: 1px solid #d1d5db; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .grid-cell:hover { background-color: #f3f4f6; }
+        .worker-node { background-color: white; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); min-width: 150px; transition: all 0.3s; }
+        .worker-node:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .resource-pool { background-color: #f3f4f6; border: 2px dashed #9ca3af; border-radius: 0.5rem; padding: 1.5rem; min-width: 200px; }
+        .data-flow { animation: flow 3s linear infinite; }
+        @keyframes flow { 
+            0% { stroke-dashoffset: 20; } 
+            100% { stroke-dashoffset: 0; } 
+        }
+        .pipeline-stage { background-color: white; border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.3s; }
+        .pipeline-stage.active { border: 2px solid #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        .pipeline-stage.error { border: 2px solid #ef4444; background-color: #fef2f2; }
+        .probability-bar { height: 2rem; background: linear-gradient(to right, #ef4444, #f59e0b, #10b981); border-radius: 9999px; position: relative; overflow: hidden; }
+        .probability-indicator { position: absolute; top: 0; bottom: 0; width: 4px; background-color: white; box-shadow: 0 0 4px rgba(0, 0, 0, 0.3); transition: left 0.3s; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-full"></div>
+                    <span class="font-bold text-xl">PPO Course: VERL & RLHF Enhanced</span>
+                </div>
+                <div class="flex space-x-8">
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Home</a>
+                    <a href="#verl" class="text-gray-700 hover:text-gray-900">VERL System</a>
+                    <a href="#rlhf" class="text-gray-700 hover:text-gray-900">RLHF Pipeline</a>
+                    <a href="#bradley-terry" class="text-gray-700 hover:text-gray-900">Bradley-Terry</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold mb-4">Enhanced PPO Course Demo</h1>
+        <p class="text-xl text-gray-600 mb-8">Explore VERL distributed systems, RLHF pipeline, and advanced PPO concepts</p>
+
+        <!-- Demo 1: VERL System Architecture -->
+        <div id="verl" class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">1. VERL Distributed System Architecture</h2>
+            <p class="text-gray-600 mb-6">Understand how VERL's HybridFlow architecture enables efficient distributed RL training.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Placement Strategy:</label>
+                    <select id="placement-strategy" class="w-full max-w-xs px-3 py-2 border rounded-md" onchange="updateVERLDiagram(this.value)">
+                        <option value="colocated">Colocated (All on same GPUs)</option>
+                        <option value="split" selected>Split (Different GPU pools)</option>
+                        <option value="hybrid">Hybrid (Actor+Ref colocated)</option>
+                    </select>
+                </div>
+
+                <div id="verl-diagram" class="relative h-96">
+                    <!-- Controller Node -->
+                    <div class="worker-node absolute top-4 left-1/2 transform -translate-x-1/2" style="border-color: #ef4444; border-width: 2px;">
+                        <h3 class="font-bold text-sm">Controller (Driver)</h3>
+                        <p class="text-xs text-gray-600 mt-1">Single Process</p>
+                    </div>
+
+                    <!-- Resource Pools -->
+                    <div id="pool-actor" class="resource-pool absolute top-32 left-8">
+                        <h3 class="font-bold text-sm">Actor Pool</h3>
+                        <div class="text-xs text-gray-600 mt-1">16 GPUs</div>
+                        <div class="w-full bg-gray-300 rounded-full h-2 mt-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <div id="pool-critic" class="resource-pool absolute top-32 left-1/2 transform -translate-x-1/2">
+                        <h3 class="font-bold text-sm">Critic Pool</h3>
+                        <div class="text-xs text-gray-600 mt-1">8 GPUs</div>
+                        <div class="w-full bg-gray-300 rounded-full h-2 mt-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <div id="pool-reward" class="resource-pool absolute top-32 right-8">
+                        <h3 class="font-bold text-sm">Reward Pool</h3>
+                        <div class="text-xs text-gray-600 mt-1">8 GPUs</div>
+                        <div class="w-full bg-gray-300 rounded-full h-2 mt-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Worker Nodes -->
+                    <div id="worker-actor" class="worker-node absolute bottom-8 left-8" style="border-color: #8b5cf6; border-width: 2px;">
+                        <h3 class="font-bold text-sm">Actor</h3>
+                        <div class="text-xs text-gray-600">8 GPUs</div>
+                        <div class="text-xs mt-2">
+                            <div>Throughput: 1500 tok/s</div>
+                            <div>GPU: 90%</div>
+                        </div>
+                    </div>
+
+                    <div id="worker-critic" class="worker-node absolute bottom-8 left-1/2 transform -translate-x-1/2" style="border-color: #3b82f6; border-width: 2px;">
+                        <h3 class="font-bold text-sm">Critic</h3>
+                        <div class="text-xs text-gray-600">8 GPUs</div>
+                        <div class="text-xs mt-2">
+                            <div>Throughput: 1800 tok/s</div>
+                            <div>GPU: 75%</div>
+                        </div>
+                    </div>
+
+                    <div id="worker-reward" class="worker-node absolute bottom-8 right-8" style="border-color: #f59e0b; border-width: 2px;">
+                        <h3 class="font-bold text-sm">Reward Model</h3>
+                        <div class="text-xs text-gray-600">8 GPUs</div>
+                        <div class="text-xs mt-2">
+                            <div>Throughput: 1200 tok/s</div>
+                            <div>GPU: 65%</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Flow Arrows -->
+                    <svg class="absolute inset-0 pointer-events-none">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                            </marker>
+                        </defs>
+                        <path d="M 400 60 L 120 280" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5,5" class="data-flow" marker-end="url(#arrowhead)" />
+                        <path d="M 400 60 L 400 280" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5,5" class="data-flow" marker-end="url(#arrowhead)" />
+                        <path d="M 400 60 L 680 280" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5" class="data-flow" marker-end="url(#arrowhead)" />
+                    </svg>
+                </div>
+
+                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <h3 class="font-medium mb-2">Key Insights:</h3>
+                    <ul class="text-sm space-y-1">
+                        <li>• HybridFlow separates control flow (single process) from computation flow (multi-process)</li>
+                        <li>• Different placement strategies trade off between performance and flexibility</li>
+                        <li>• Asynchronous execution maximizes GPU utilization</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo 2: RLHF Pipeline -->
+        <div id="rlhf" class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">2. RLHF Training Pipeline</h2>
+            <p class="text-gray-600 mb-6">Visualize the three-stage RLHF training process and discover the critical implementation issue.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="mb-6">
+                    <button onclick="startRLHFPipeline()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Start Pipeline</button>
+                    <button onclick="resetRLHFPipeline()" class="ml-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Reset</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Data Preprocessing -->
+                    <div id="stage-data" class="pipeline-stage">
+                        <h3 class="font-bold mb-2">Data Preprocessing</h3>
+                        <p class="text-sm text-gray-600 mb-3">Convert preference pairs</p>
+                        <div class="text-xs space-y-1">
+                            <div>• 112K samples</div>
+                            <div>• Tokenization</div>
+                            <div>• Train/test split</div>
+                        </div>
+                    </div>
+
+                    <!-- SFT -->
+                    <div id="stage-sft" class="pipeline-stage">
+                        <h3 class="font-bold mb-2">SFT Training</h3>
+                        <p class="text-sm text-gray-600 mb-3">Train on demonstrations</p>
+                        <div id="sft-metrics" class="text-xs space-y-1 hidden">
+                            <div>Loss: 2.847</div>
+                            <div>Perplexity: 17.2</div>
+                            <div>Samples: 224K</div>
+                        </div>
+                    </div>
+
+                    <!-- Reward Model -->
+                    <div id="stage-reward" class="pipeline-stage">
+                        <h3 class="font-bold mb-2">Reward Model</h3>
+                        <p class="text-sm text-gray-600 mb-3">Learn preferences</p>
+                        <div id="reward-metrics" class="text-xs space-y-1 hidden">
+                            <div class="text-red-600 font-bold">⚠️ Bradley-Terry Missing!</div>
+                            <div>Accuracy: 50.1%</div>
+                            <div>Loss: 1.000</div>
+                        </div>
+                    </div>
+
+                    <!-- PPO -->
+                    <div id="stage-ppo" class="pipeline-stage">
+                        <h3 class="font-bold mb-2">PPO Training</h3>
+                        <p class="text-sm text-gray-600 mb-3">Optimize with feedback</p>
+                        <div id="ppo-metrics" class="text-xs space-y-1 hidden">
+                            <div>KL: 0.012</div>
+                            <div>Reward: 0.73</div>
+                            <div>Policy Loss: -0.088</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pipeline-alert" class="mt-6 p-4 bg-red-50 rounded-lg border-2 border-red-300 hidden">
+                    <h3 class="font-medium text-red-800 mb-2">Critical Issue Detected!</h3>
+                    <p class="text-sm text-red-700">The reward model training failed because VERL's implementation uses a placeholder loss function instead of the Bradley-Terry loss. Without proper preference learning, the model cannot distinguish good from bad responses.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo 3: Bradley-Terry Calculator -->
+        <div id="bradley-terry" class="demo-section">
+            <h2 class="text-2xl font-bold mb-4">3. Bradley-Terry Model Calculator</h2>
+            <p class="text-gray-600 mb-6">Understand how preference learning works with interactive probability calculations.</p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block font-medium mb-2">Chosen Response Reward: <span id="chosen-value">0.8</span></label>
+                        <input type="range" id="chosen-reward" min="-2" max="2" step="0.1" value="0.8" oninput="updateBradleyTerry()" class="w-full">
+                        <div class="mt-2 p-3 bg-green-50 rounded text-sm">
+                            <div class="font-medium text-green-700">Chosen Response:</div>
+                            <div class="text-gray-700">"To improve productivity, use time-blocking and eliminate distractions."</div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block font-medium mb-2">Rejected Response Reward: <span id="rejected-value">0.2</span></label>
+                        <input type="range" id="rejected-reward" min="-2" max="2" step="0.1" value="0.2" oninput="updateBradleyTerry()" class="w-full">
+                        <div class="mt-2 p-3 bg-red-50 rounded text-sm">
+                            <div class="font-medium text-red-700">Rejected Response:</div>
+                            <div class="text-gray-700">"Just work harder."</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="font-medium mb-4">Bradley-Terry Probability</h3>
+                    <div class="text-3xl font-bold text-center mb-4">
+                        P(chosen > rejected) = <span id="probability">0.731</span>
+                    </div>
+                    
+                    <div class="probability-bar mb-6">
+                        <div id="probability-indicator" class="probability-indicator" style="left: 73.1%"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div class="text-center">
+                            <div class="font-medium">Reward Difference</div>
+                            <div class="text-2xl font-mono" id="reward-diff">0.6</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-medium">Loss</div>
+                            <div class="text-2xl font-mono" id="bt-loss">0.314</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-medium">Confidence</div>
+                            <div class="text-2xl font-mono" id="confidence">73.1%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-yellow-50 rounded-lg">
+                    <h3 class="font-medium mb-2">Mathematical Formula:</h3>
+                    <div class="font-mono text-sm">
+                        P(chosen > rejected) = 1 / (1 + exp(r_rejected - r_chosen))
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="mt-12 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
+            <h2 class="text-2xl font-bold mb-4">What You've Learned</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div>
+                    <h3 class="font-bold mb-2">VERL Architecture</h3>
+                    <ul class="text-sm space-y-1">
+                        <li>• HybridFlow design pattern</li>
+                        <li>• Worker group separation</li>
+                        <li>• Resource pool management</li>
+                        <li>• Asynchronous execution</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">RLHF Pipeline</h3>
+                    <ul class="text-sm space-y-1">
+                        <li>• Three-stage training process</li>
+                        <li>• Data preprocessing steps</li>
+                        <li>• Critical implementation gaps</li>
+                        <li>• Impact on model behavior</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">Preference Learning</h3>
+                    <ul class="text-sm space-y-1">
+                        <li>• Bradley-Terry model</li>
+                        <li>• Probability calculations</li>
+                        <li>• Loss function importance</li>
+                        <li>• Reward optimization</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // VERL System Functions
+        function updateVERLDiagram(strategy) {
+            const actorPool = document.getElementById('pool-actor');
+            const criticPool = document.getElementById('pool-critic');
+            const rewardPool = document.getElementById('pool-reward');
+            
+            if (strategy === 'colocated') {
+                // Hide individual pools, show global pool
+                actorPool.style.display = 'none';
+                criticPool.innerHTML = '<h3 class="font-bold text-sm">Global Resource Pool</h3><div class="text-xs text-gray-600 mt-1">32 GPUs</div><div class="w-full bg-gray-300 rounded-full h-2 mt-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div></div>';
+                criticPool.style.left = '50%';
+                rewardPool.style.display = 'none';
+            } else if (strategy === 'hybrid') {
+                // Show hybrid configuration
+                actorPool.innerHTML = '<h3 class="font-bold text-sm">Actor-Ref Pool</h3><div class="text-xs text-gray-600 mt-1">16 GPUs</div><div class="w-full bg-gray-300 rounded-full h-2 mt-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div></div>';
+                criticPool.innerHTML = '<h3 class="font-bold text-sm">Critic-Reward Pool</h3><div class="text-xs text-gray-600 mt-1">16 GPUs</div><div class="w-full bg-gray-300 rounded-full h-2 mt-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div></div>';
+                rewardPool.style.display = 'none';
+            } else {
+                // Reset to split configuration
+                location.reload();
+            }
+        }
+
+        // RLHF Pipeline Functions
+        let pipelineStep = 0;
+        function startRLHFPipeline() {
+            const stages = ['data', 'sft', 'reward', 'ppo'];
+            
+            const runStep = () => {
+                if (pipelineStep < stages.length) {
+                    const stage = document.getElementById(`stage-${stages[pipelineStep]}`);
+                    stage.classList.add('active');
+                    
+                    // Show metrics
+                    if (pipelineStep > 0) {
+                        const metrics = document.getElementById(`${stages[pipelineStep]}-metrics`);
+                        if (metrics) metrics.classList.remove('hidden');
+                    }
+                    
+                    // Special handling for reward model
+                    if (stages[pipelineStep] === 'reward') {
+                        stage.classList.add('error');
+                        setTimeout(() => {
+                            document.getElementById('pipeline-alert').classList.remove('hidden');
+                        }, 1000);
+                    }
+                    
+                    pipelineStep++;
+                    setTimeout(runStep, 1500);
+                }
+            };
+            
+            runStep();
+        }
+
+        function resetRLHFPipeline() {
+            pipelineStep = 0;
+            document.querySelectorAll('.pipeline-stage').forEach(stage => {
+                stage.classList.remove('active', 'error');
+            });
+            document.querySelectorAll('[id$="-metrics"]').forEach(metrics => {
+                metrics.classList.add('hidden');
+            });
+            document.getElementById('pipeline-alert').classList.add('hidden');
+        }
+
+        // Bradley-Terry Calculator Functions
+        function sigmoid(x) {
+            return 1 / (1 + Math.exp(-x));
+        }
+
+        function updateBradleyTerry() {
+            const chosenReward = parseFloat(document.getElementById('chosen-reward').value);
+            const rejectedReward = parseFloat(document.getElementById('rejected-reward').value);
+            
+            document.getElementById('chosen-value').textContent = chosenReward.toFixed(1);
+            document.getElementById('rejected-value').textContent = rejectedReward.toFixed(1);
+            
+            const diff = chosenReward - rejectedReward;
+            const probability = sigmoid(diff);
+            const loss = -Math.log(Math.max(probability, 0.0001));
+            
+            document.getElementById('probability').textContent = probability.toFixed(3);
+            document.getElementById('reward-diff').textContent = diff.toFixed(1);
+            document.getElementById('bt-loss').textContent = loss.toFixed(3);
+            document.getElementById('confidence').textContent = (probability * 100).toFixed(1) + '%';
+            document.getElementById('probability-indicator').style.left = (probability * 100) + '%';
+        }
+
+        // Initialize
+        updateBradleyTerry();
+    </script>
+</body>
+</html>
