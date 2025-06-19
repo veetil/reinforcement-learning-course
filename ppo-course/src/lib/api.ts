@@ -62,50 +62,50 @@ class APIClient {
   }
 
   async startTraining(config: TrainingConfig): Promise<{ id: string }> {
-    return this.fetch('/api/training/start', {
+    return this.fetch('/api/v1/training/start', {
       method: 'POST',
       body: JSON.stringify(config),
     });
   }
 
   async getTrainingStatus(id: string): Promise<TrainingStatus> {
-    return this.fetch(`/api/training/status/${id}`);
+    return this.fetch(`/api/v1/training/status/${id}`);
   }
 
   async stopTraining(id: string): Promise<void> {
-    await this.fetch(`/api/training/stop/${id}`, {
+    await this.fetch(`/api/v1/training/stop/${id}`, {
       method: 'POST',
     });
   }
 
   async executeCode(request: CodeExecutionRequest): Promise<CodeExecutionResult> {
-    return this.fetch('/api/code/execute', {
+    return this.fetch('/api/v1/code/execute', {
       method: 'POST',
       body: JSON.stringify(request),
     });
   }
 
   async getEnvironments(): Promise<string[]> {
-    return this.fetch('/api/environments');
+    return this.fetch('/api/v1/training/environments');
   }
 
   async getAlgorithms(): Promise<string[]> {
-    return this.fetch('/api/algorithms');
+    return this.fetch('/api/v1/training/algorithms');
   }
 
   async saveCheckpoint(trainingId: string, name: string): Promise<void> {
-    await this.fetch('/api/training/checkpoint', {
+    await this.fetch('/api/v1/training/checkpoint', {
       method: 'POST',
       body: JSON.stringify({ trainingId, name }),
     });
   }
 
   async loadCheckpoint(checkpointId: string): Promise<TrainingConfig> {
-    return this.fetch(`/api/training/checkpoint/${checkpointId}`);
+    return this.fetch(`/api/v1/training/checkpoint/${checkpointId}`);
   }
 
   async exportModel(trainingId: string, format: 'onnx' | 'pytorch' | 'tensorflow'): Promise<Blob> {
-    const response = await fetch(`${API_BASE_URL}/api/training/export/${trainingId}?format=${format}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/training/export/${trainingId}?format=${format}`);
     
     if (!response.ok) {
       throw new Error(`Export failed: ${response.statusText}`);

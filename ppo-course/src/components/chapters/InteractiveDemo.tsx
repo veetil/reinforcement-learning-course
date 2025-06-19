@@ -29,6 +29,12 @@ export const InteractiveDemo: React.FC<InteractiveDemoProps> = ({ demoType, clas
         return <NeuralNetworkDesigner />;
       case 'distributed-training':
         return <DistributedTrainingVisualizer />;
+      case 'gae-visualization':
+        return <GAEVisualizationDemo isPlaying={isPlaying} />;
+      case 'value-function-grid':
+        return <ValueFunctionGridDemo isPlaying={isPlaying} />;
+      case 'policy-gradient-intuition':
+        return <PolicyGradientIntuitionDemo isPlaying={isPlaying} />;
       default:
         return <div>Demo type not found: {demoType}</div>;
     }
@@ -224,6 +230,103 @@ const MDPVisualizationDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =
           <p>Click Play to see MDP transitions in action</p>
         )}
       </div>
+    </div>
+  );
+};
+
+// GAE Visualization Demo
+const GAEVisualizationDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => {
+  const [lambda, setLambda] = React.useState(0.95);
+  const [step, setStep] = React.useState(0);
+  
+  React.useEffect(() => {
+    if (isPlaying) {
+      const interval = setInterval(() => {
+        setStep(prev => (prev + 1) % 5);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isPlaying]);
+  
+  const advantages = [2.5, 1.8, -0.5, 1.2, 0.8];
+  const tdErrors = [1.0, 0.5, -0.8, 0.6, 0.3];
+  
+  return (
+    <div className="w-full">
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Lambda (λ) = {lambda.toFixed(2)}
+        </label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={lambda}
+          onChange={(e) => setLambda(parseFloat(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      <div className="grid grid-cols-5 gap-2 mb-4">
+        {advantages.map((adv, idx) => (
+          <div
+            key={idx}
+            className={`p-3 rounded text-center transition-all ${
+              idx <= step ? 'bg-blue-100 border-2 border-blue-500' : 'bg-gray-100'
+            }`}
+          >
+            <div className="text-xs font-semibold mb-1">t = {idx}</div>
+            <div className="text-sm">δ = {tdErrors[idx].toFixed(1)}</div>
+            <div className="text-xs text-gray-600 mt-1">
+              weight: {Math.pow(lambda, idx).toFixed(2)}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="bg-gray-50 p-4 rounded">
+        <div className="text-sm font-semibold mb-2">GAE Calculation:</div>
+        <div className="text-xs font-mono">
+          A_t = Σ(λ^l * δ_(t+l))
+        </div>
+        {isPlaying && (
+          <div className="mt-2 text-sm">
+            Current advantage estimate: {
+              advantages.slice(0, step + 1)
+                .reduce((sum, _, idx) => sum + tdErrors[idx] * Math.pow(lambda, idx), 0)
+                .toFixed(2)
+            }
+          </div>
+        )}
+      </div>
+      
+      <p className="text-xs text-gray-600 mt-3">
+        {isPlaying 
+          ? "Calculating advantage using exponentially weighted TD errors..." 
+          : "Click Play to see GAE calculation step by step"
+        }
+      </p>
+    </div>
+  );
+};
+
+// Value Function Grid Demo
+const ValueFunctionGridDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => {
+  return (
+    <div className="text-center">
+      <p className="text-gray-600">Value Function Grid Visualization</p>
+      {isPlaying && <p className="text-blue-600 mt-2">Updating value estimates...</p>}
+    </div>
+  );
+};
+
+// Policy Gradient Intuition Demo
+const PolicyGradientIntuitionDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => {
+  return (
+    <div className="text-center">
+      <p className="text-gray-600">Policy Gradient Intuition</p>
+      {isPlaying && <p className="text-green-600 mt-2">Adjusting policy parameters...</p>}
     </div>
   );
 };
