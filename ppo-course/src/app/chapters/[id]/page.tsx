@@ -2217,7 +2217,11 @@ criterion = nn.CrossEntropyLoss()`;
         {chapter.sections.map((section: any, index: number) => (
           <motion.section
             key={section.id}
-            ref={el => sectionsRef.current[section.id] = el}
+            ref={el => {
+              if (el) {
+                sectionsRef.current[section.id] = el;
+              }
+            }}
             data-section-id={section.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
