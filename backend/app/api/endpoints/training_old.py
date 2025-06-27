@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, List
 import uuid
 from app.schemas.training import TrainingConfig
 from app.services.rl_engine_mock import MockRLEngine
 
 router = APIRouter()
+
+# In-memory storage for demo (use Redis in production)
+training_sessions: Dict[str, TrainingStatus] = {}
 rl_engine = MockRLEngine()
 
 @router.post("/start")
@@ -13,7 +16,9 @@ async def start_training(config: TrainingConfig):
     try:
         # Start training with mock engine
         session_id = await rl_engine.start_training(config.dict())
+        
         return {"id": session_id}
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -23,6 +28,7 @@ async def get_training_status(session_id: str):
     status = rl_engine.get_training_status(session_id)
     if not status:
         raise HTTPException(status_code=404, detail="Training session not found")
+    
     return status
 
 @router.post("/stop/{session_id}")
@@ -31,6 +37,7 @@ async def stop_training(session_id: str):
     success = rl_engine.stop_training(session_id)
     if not success:
         raise HTTPException(status_code=404, detail="Training session not found")
+    
     return {"message": "Training stopped successfully"}
 
 @router.get("/environments")

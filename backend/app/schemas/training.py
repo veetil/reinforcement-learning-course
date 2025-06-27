@@ -2,18 +2,20 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import datetime
 
+class HyperParameters(BaseModel):
+    learningRate: float = 0.0003
+    clipRange: float = 0.2
+    gamma: float = 0.99
+    gaeBalance: float = 0.95
+    nEpochs: int = 10
+    batchSize: int = 64
+    entropyCoef: float = 0.01
+    valueCoef: float = 0.5
+
 class TrainingConfig(BaseModel):
     environment: str
     algorithm: str = "PPO"
-    total_steps: int = 10000
-    learning_rate: float = 0.0003
-    batch_size: int = 64
-    n_epochs: int = 10
-    gamma: float = 0.99
-    gae_lambda: float = 0.95
-    clip_range: float = 0.2
-    value_coef: float = 0.5
-    entropy_coef: float = 0.01
+    hyperparameters: HyperParameters
 
 class TrainingStatus(BaseModel):
     session_id: str

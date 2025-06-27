@@ -12,6 +12,7 @@ const navItems = [
   { href: '/chapters', label: 'Chapters', icon: Brain },
   { href: '/playground', label: 'Playground', icon: Code },
   { href: '/algorithms', label: 'Algorithm Zoo', icon: Beaker },
+  { href: '/demos/rlhf-interactive', label: 'RLHF Demo', icon: Beaker },
   { href: '/paper-vault', label: 'Paper Vault', icon: Library },
   { href: '/assessment', label: 'Assessment', icon: Trophy },
 ]

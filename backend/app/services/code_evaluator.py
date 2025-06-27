@@ -110,8 +110,7 @@ def test_reset():
                     network_disabled=True,
                     remove=True,
                     stdout=True,
-                    stderr=True,
-                    timeout=30
+                    stderr=True
                 )
                 
                 return ExecutionResult(
