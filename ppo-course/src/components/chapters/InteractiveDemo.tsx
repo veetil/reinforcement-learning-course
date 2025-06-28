@@ -672,185 +672,288 @@ const GradientDescentDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =>
 };
 
 const MDPVisualizationDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => {
-  const [currentState, setCurrentState] = React.useState(0);
-  const [action, setAction] = React.useState<number | null>(null);
+  // 2D Grid state: [row, col] where [0,0] is top-left
+  const [robotPos, setRobotPos] = React.useState([3, 0]); // Start at bottom-left
+  const [action, setAction] = React.useState<string | null>(null);
   const [totalReward, setTotalReward] = React.useState(0);
   const [step, setStep] = React.useState(0);
-  const [trajectory, setTrajectory] = React.useState<Array<{state: number, action: number | null, reward: number}>>([]);
-  const [explorationStrategy, setExplorationStrategy] = React.useState<'random' | 'greedy' | 'epsilon-greedy'>('random');
+  const [isDeterministic, setIsDeterministic] = React.useState(true);
+  const [showOptimalPath, setShowOptimalPath] = React.useState(false);
+  const [trajectory, setTrajectory] = React.useState<Array<[number, number]>>([]);
+  
+  // 6x6 Grid Layout: 0=empty, 1=wall, 2=goal, 3=start, 4=hole
+  const gridLayout = [
+    [0, 0, 1, 0, 0, 2], // Row 0: Goal at top-right
+    [0, 1, 1, 1, 0, 0], // Row 1: Wall barrier
+    [0, 1, 4, 1, 0, 0], // Row 2: Hole (dangerous)
+    [0, 0, 0, 1, 0, 0], // Row 3: Open path
+    [0, 1, 1, 1, 1, 0], // Row 4: More walls
+    [3, 0, 0, 0, 0, 0]  // Row 5: Start position (bottom-left)
+  ];
+  
+  const GRID_SIZE = 6;
+  const START_POS: [number, number] = [5, 0];
+  const GOAL_POS: [number, number] = [0, 5];
+  
+  // Optimal path (avoiding obstacles)
+  const optimalPath = [
+    [5, 0], [4, 0], [3, 0], [3, 1], [3, 2], [2, 2], // Go up then right around walls
+    [1, 2], [1, 3], [1, 4], [1, 5], [0, 5] // Navigate around walls to goal
+  ];
+  
+  const getGridCell = (row: number, col: number) => {
+    if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return 1; // Out of bounds = wall
+    return gridLayout[row][col];
+  };
+  
+  const isValidMove = (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
+    const targetCell = getGridCell(toRow, toCol);
+    return targetCell !== 1; // Can't move into walls
+  };
+  
+  const getReward = (row: number, col: number) => {
+    const cell = getGridCell(row, col);
+    if (row === GOAL_POS[0] && col === GOAL_POS[1]) return 100; // Goal
+    if (cell === 4) return -50; // Hole penalty
+    return -1; // Living penalty (encourages efficiency)
+  };
+  
+  const moveRobot = (direction: string) => {
+    const [currentRow, currentCol] = robotPos;
+    let targetRow = currentRow;
+    let targetCol = currentCol;
+    
+    // Calculate intended move
+    switch(direction) {
+      case 'up': targetRow = currentRow - 1; break;
+      case 'down': targetRow = currentRow + 1; break;
+      case 'left': targetCol = currentCol - 1; break;
+      case 'right': targetCol = currentCol + 1; break;
+    }
+    
+    // Apply stochasticity if enabled
+    if (!isDeterministic && Math.random() < 0.2) {
+      // 20% chance of random movement (like slippery ice)
+      const directions = ['up', 'down', 'left', 'right'];
+      const randomDir = directions[Math.floor(Math.random() * directions.length)];
+      switch(randomDir) {
+        case 'up': targetRow = currentRow - 1; break;
+        case 'down': targetRow = currentRow + 1; break;
+        case 'left': targetCol = currentCol - 1; break;
+        case 'right': targetCol = currentCol + 1; break;
+      }
+    }
+    
+    // Check if move is valid
+    if (isValidMove(currentRow, currentCol, targetRow, targetCol)) {
+      const newPos: [number, number] = [targetRow, targetCol];
+      setRobotPos(newPos);
+      setTrajectory(prev => [...prev, newPos]);
+      
+      const reward = getReward(targetRow, targetCol);
+      setTotalReward(prev => prev + reward);
+      setStep(prev => prev + 1);
+      
+      return newPos;
+    }
+    
+    // Move blocked - stay in place but still get penalty
+    const reward = getReward(currentRow, currentCol);
+    setTotalReward(prev => prev + reward);
+    setStep(prev => prev + 1);
+    return robotPos;
+  };
   
   React.useEffect(() => {
     if (isPlaying) {
       const interval = setInterval(() => {
-        const qValues = [0, 1, 2, 10]; // Simple Q-values favoring rightward movement
-        let newAction: number;
+        // Simple greedy strategy towards goal
+        const [currentRow, currentCol] = robotPos;
+        const [goalRow, goalCol] = GOAL_POS;
         
-        // Choose action based on exploration strategy
-        switch(explorationStrategy) {
-          case 'greedy':
-            // Always go right towards goal (S3)
-            newAction = currentState < 3 ? 1 : 0;
-            break;
-          case 'epsilon-greedy':
-            // 80% greedy, 20% random
-            if (Math.random() < 0.8) {
-              newAction = currentState < 3 ? 1 : 0; // Greedy choice
-            } else {
-              newAction = Math.floor(Math.random() * 2); // Random choice
+        let bestAction = 'up';
+        
+        // Choose action that gets closer to goal
+        if (currentRow > goalRow && isValidMove(currentRow, currentCol, currentRow - 1, currentCol)) {
+          bestAction = 'up';
+        } else if (currentRow < goalRow && isValidMove(currentRow, currentCol, currentRow + 1, currentCol)) {
+          bestAction = 'down';
+        } else if (currentCol < goalCol && isValidMove(currentRow, currentCol, currentRow, currentCol + 1)) {
+          bestAction = 'right';
+        } else if (currentCol > goalCol && isValidMove(currentRow, currentCol, currentRow, currentCol - 1)) {
+          bestAction = 'left';
+        } else {
+          // If can't move toward goal, try any valid move
+          const actions = ['up', 'down', 'left', 'right'];
+          for (const action of actions) {
+            let testRow = currentRow, testCol = currentCol;
+            switch(action) {
+              case 'up': testRow--; break;
+              case 'down': testRow++; break;
+              case 'left': testCol--; break;
+              case 'right': testCol++; break;
             }
-            break;
-          default: // random
-            newAction = Math.floor(Math.random() * 2);
+            if (isValidMove(currentRow, currentCol, testRow, testCol)) {
+              bestAction = action;
+              break;
+            }
+          }
         }
         
-        setAction(newAction);
+        setAction(bestAction);
         
         setTimeout(() => {
-          setCurrentState(prev => {
-            const nextState = newAction === 0 ? Math.max(0, prev - 1) : Math.min(3, prev + 1);
-            const reward = getReward(nextState);
-            
-            setTotalReward(total => total + reward);
-            setTrajectory(traj => [...traj, { state: nextState, action: newAction, reward }]);
-            setStep(s => s + 1);
-            
-            return nextState;
-          });
+          moveRobot(bestAction);
           setAction(null);
         }, 800);
-      }, 2000);
+      }, 1500);
       
       return () => clearInterval(interval);
     } else {
-      // Reset everything
-      setCurrentState(0);
+      // Reset
+      setRobotPos(START_POS);
       setAction(null);
       setTotalReward(0);
       setStep(0);
-      setTrajectory([]);
+      setTrajectory([START_POS]);
     }
-  }, [isPlaying, currentState, explorationStrategy]);
+  }, [isPlaying, robotPos, isDeterministic]);
   
-  const states = ['S0', 'S1', 'S2', 'S3'];
-  const rewards = [-1, 0, 0, 10];
-  const stateDescriptions = [
-    'Start (Penalty)', 
-    'Neutral', 
-    'Almost There', 
-    'Goal! (Reward)'
-  ];
+  const getCellDisplay = (row: number, col: number) => {
+    const cell = getGridCell(row, col);
+    const isRobot = robotPos[0] === row && robotPos[1] === col;
+    const isOnOptimalPath = showOptimalPath && optimalPath.some(([r, c]) => r === row && c === col);
+    const isInTrajectory = trajectory.some(([r, c]) => r === row && c === col);
+    
+    let bgColor = 'bg-gray-100'; // Default empty
+    let content = '';
+    let textColor = 'text-gray-600';
+    
+    if (cell === 1) { // Wall
+      bgColor = 'bg-gray-800';
+      content = '■';
+      textColor = 'text-gray-300';
+    } else if (cell === 2 || (row === GOAL_POS[0] && col === GOAL_POS[1])) { // Goal
+      bgColor = 'bg-green-500';
+      content = '🏆';
+      textColor = 'text-white';
+    } else if (cell === 4) { // Hole
+      bgColor = 'bg-red-300';
+      content = '⚠️';
+      textColor = 'text-red-800';
+    } else if (cell === 3 || (row === START_POS[0] && col === START_POS[1])) { // Start
+      bgColor = 'bg-blue-200';
+      content = '🏠';
+      textColor = 'text-blue-800';
+    }
+    
+    if (isOnOptimalPath && !isRobot) {
+      bgColor = bgColor.replace('bg-gray-100', 'bg-yellow-200');
+    }
+    
+    if (isInTrajectory && !isRobot && cell === 0) {
+      bgColor = 'bg-blue-100';
+    }
+    
+    return { bgColor, content, textColor, isRobot };
+  };
   
-  const getReward = (state: number) => rewards[state];
+  const hasReachedGoal = robotPos[0] === GOAL_POS[0] && robotPos[1] === GOAL_POS[1];
   
   return (
     <div className="space-y-4">
-      {/* MDP Explanation */}
-      <div className="bg-gray-100 rounded-lg p-4 text-left">
-        <h4 className="font-semibold mb-2">Markov Decision Process (MDP) Components:</h4>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="font-semibold text-blue-600">States (S):</span> S0, S1, S2, S3 - Different positions
-          </div>
-          <div>
-            <span className="font-semibold text-purple-600">Actions (A):</span> Left ←, Right → - Movement choices
-          </div>
-          <div>
-            <span className="font-semibold text-green-600">Rewards (R):</span> [-1, 0, 0, +10] - Immediate feedback
-          </div>
-          <div>
-            <span className="font-semibold text-orange-600">Transitions:</span> P(s'|s,a) - State changes
-          </div>
-        </div>
-        <div className="mt-2 text-xs text-gray-600">
-          <strong>Goal:</strong> Learn to reach S3 (highest reward) while minimizing time in S0 (penalty)
+      {/* Scenario Explanation */}
+      <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-200">
+        <h4 className="font-semibold mb-2 text-blue-800">🤖 Robot Office Navigation Challenge</h4>
+        <p className="text-sm text-gray-700 mb-2">
+          A delivery robot needs to navigate through an office building to reach the goal (🏆). 
+          <strong>Why can't it go straight?</strong> There are walls, furniture, and dangerous holes blocking direct paths!
+        </p>
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div><span className="font-semibold">🏠 Start:</span> Robot's initial position</div>
+          <div><span className="font-semibold">🏆 Goal:</span> Delivery destination (+100 reward)</div>
+          <div><span className="font-semibold">■ Walls:</span> Physical obstacles (can't pass through)</div>
+          <div><span className="font-semibold">⚠️ Holes:</span> Dangerous areas (-50 penalty)</div>
         </div>
       </div>
       
-      {/* Exploration Strategy Selector */}
-      <div className="bg-blue-50 rounded-lg p-3">
+      {/* Controls */}
+      <div className="bg-gray-50 rounded-lg p-3">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-semibold">Exploration Strategy:</label>
-          <select 
-            value={explorationStrategy} 
-            onChange={(e) => setExplorationStrategy(e.target.value as any)}
-            className="text-sm border rounded px-2 py-1"
-            disabled={isPlaying}
-          >
-            <option value="random">Random (Pure Exploration)</option>
-            <option value="greedy">Greedy (Pure Exploitation)</option>
-            <option value="epsilon-greedy">ε-Greedy (80% Greedy, 20% Random)</option>
-          </select>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input 
+                type="checkbox" 
+                checked={isDeterministic}
+                onChange={(e) => setIsDeterministic(e.target.checked)}
+                disabled={isPlaying}
+              />
+              Deterministic Movement
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input 
+                type="checkbox" 
+                checked={showOptimalPath}
+                onChange={(e) => setShowOptimalPath(e.target.checked)}
+              />
+              Show Optimal Path
+            </label>
+          </div>
         </div>
         <div className="text-xs text-gray-600">
-          {explorationStrategy === 'random' && "Agent chooses actions randomly - explores but never learns optimal path"}
-          {explorationStrategy === 'greedy' && "Agent always chooses best known action - fast goal reaching but no exploration"}
-          {explorationStrategy === 'epsilon-greedy' && "Agent mostly chooses best action but sometimes explores - balances learning and performance"}
+          {isDeterministic ? 
+            "Robot moves exactly as intended (perfect sensors/motors)" : 
+            "20% chance of slipping in wrong direction (realistic uncertainty)"}
         </div>
       </div>
       
-      {/* MDP Visualization */}
+      {/* Grid Visualization */}
       <div className="bg-white rounded-lg p-4 border">
-        {/* States */}
-        <div className="flex justify-center items-center gap-6 mb-6">
-          {states.map((state, idx) => (
-            <div key={idx} className="relative text-center">
-              {/* Transition arrows */}
-              {idx < states.length - 1 && (
-                <div className="absolute top-1/2 -right-3 transform -translate-y-1/2 z-10">
-                  <svg width="24" height="24" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" fill={action === 1 && currentState === idx ? '#8B5CF6' : '#CBD5E1'} />
-                  </svg>
-                </div>
-              )}
-              {idx > 0 && (
-                <div className="absolute top-1/2 -left-3 transform -translate-y-1/2 rotate-180 z-10">
-                  <svg width="24" height="24" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" fill={action === 0 && currentState === idx ? '#8B5CF6' : '#CBD5E1'} />
-                  </svg>
-                </div>
-              )}
+        <div className="grid grid-cols-6 gap-1 max-w-md mx-auto mb-4" style={{aspectRatio: '1'}}>
+          {Array.from({length: GRID_SIZE}, (_, row) => 
+            Array.from({length: GRID_SIZE}, (_, col) => {
+              const { bgColor, content, textColor, isRobot } = getCellDisplay(row, col);
               
-              {/* State circle */}
-              <div className={`w-24 h-24 rounded-full flex flex-col items-center justify-center font-bold text-white transition-all border-4 ${
-                currentState === idx ? 'bg-blue-600 scale-110 border-blue-800 shadow-lg' : 'bg-gray-400 border-gray-500'
-              }`}>
-                <div className="text-lg">{state}</div>
-                <div className="text-xs opacity-80">r={rewards[idx]}</div>
-              </div>
-              
-              {/* State description */}
-              <div className="text-xs mt-2 font-medium text-gray-700">
-                {stateDescriptions[idx]}
-              </div>
-              
-              {/* Agent indicator */}
-              {currentState === idx && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold"
+              return (
+                <div
+                  key={`${row}-${col}`}
+                  className={`aspect-square border border-gray-300 ${bgColor} ${textColor} 
+                    flex items-center justify-center text-lg font-bold relative transition-all duration-300
+                    ${isRobot ? 'ring-4 ring-red-500 scale-110' : ''}`}
                 >
-                  🤖
-                </motion.div>
-              )}
-            </div>
-          ))}
+                  {content}
+                  {isRobot && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute inset-0 flex items-center justify-center text-2xl"
+                    >
+                      🤖
+                    </motion.div>
+                  )}
+                </div>
+              );
+            })
+          ).flat()}
         </div>
         
         {/* Current Action Display */}
-        {action !== null && (
+        {action && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
             className="text-center mb-4"
           >
             <div className="inline-block bg-purple-100 border-2 border-purple-500 rounded-lg px-4 py-2">
               <div className="text-lg font-semibold text-purple-700">
-                Taking Action: {action === 0 ? '← Left' : 'Right →'}
+                Moving: {action === 'up' ? '↑ Up' : action === 'down' ? '↓ Down' : 
+                         action === 'left' ? '← Left' : '→ Right'}
               </div>
-              <div className="text-sm text-purple-600">
-                Strategy: {explorationStrategy}
-              </div>
+              {!isDeterministic && (
+                <div className="text-sm text-purple-600">
+                  {Math.random() < 0.2 ? "Slipped! Unintended movement" : "Moving as planned"}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -862,29 +965,42 @@ const MDPVisualizationDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =
             <div className="text-xs text-gray-600">Steps Taken</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-green-600">{totalReward}</div>
+            <div className={`text-2xl font-bold ${totalReward >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {totalReward}
+            </div>
             <div className="text-xs text-gray-600">Total Reward</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-orange-600">
-              {trajectory.filter(t => t.state === 3).length}
+            <div className={`text-2xl font-bold ${hasReachedGoal ? 'text-green-600' : 'text-orange-600'}`}>
+              {hasReachedGoal ? '✓' : Math.round(Math.sqrt(Math.pow(robotPos[0] - GOAL_POS[0], 2) + Math.pow(robotPos[1] - GOAL_POS[1], 2)))}
             </div>
-            <div className="text-xs text-gray-600">Goal Reached</div>
+            <div className="text-xs text-gray-600">{hasReachedGoal ? 'Success!' : 'Distance to Goal'}</div>
           </div>
         </div>
       </div>
       
-      {/* Learning Insights */}
+      {/* Key Learning Points */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h5 className="font-semibold text-yellow-800 mb-2">💡 Why This Demonstrates MDP Concepts:</h5>
+        <div className="space-y-1 text-sm text-yellow-700">
+          <div><strong>States:</strong> Robot's position [row, col] in the grid</div>
+          <div><strong>Actions:</strong> Move up, down, left, or right</div>
+          <div><strong>Obstacles explain planning:</strong> Can't go straight due to physical walls</div>
+          <div><strong>Uncertainty matters:</strong> Stochastic movement shows why we need robust policies</div>
+          <div><strong>Rewards shape behavior:</strong> Goal reward (+100) vs penalties (-1 per step, -50 for holes)</div>
+          <div><strong>Sequential decisions:</strong> Each move affects future possibilities</div>
+        </div>
+      </div>
+      
+      {/* Status Messages */}
       <div className="text-center space-y-2">
         <p className="text-sm font-semibold text-gray-700">
-          {!isPlaying && "This MDP teaches how agents learn to make sequential decisions"}
-          {isPlaying && step === 0 && "Agent starting exploration..."}
-          {isPlaying && step > 0 && step < 5 && "Learning state transitions and rewards..."}
-          {isPlaying && step >= 5 && totalReward > 20 && "Agent is finding the goal efficiently!"}
-          {isPlaying && step >= 5 && totalReward <= 0 && "Agent struggling - needs better strategy"}
+          {!isPlaying && "A realistic scenario showing why agents need sophisticated planning"}
+          {isPlaying && !hasReachedGoal && "Robot navigating around obstacles to reach goal..."}
+          {isPlaying && hasReachedGoal && "🎉 Mission accomplished! Robot found optimal path around obstacles"}
         </p>
         <p className="text-xs text-gray-500">
-          The Markov Property: Next state depends only on current state + action (not history)
+          This demonstrates why "just go straight" doesn't work in real environments with constraints
         </p>
       </div>
     </div>
