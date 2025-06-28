@@ -674,65 +674,218 @@ const GradientDescentDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =>
 const MDPVisualizationDemo: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => {
   const [currentState, setCurrentState] = React.useState(0);
   const [action, setAction] = React.useState<number | null>(null);
+  const [totalReward, setTotalReward] = React.useState(0);
+  const [step, setStep] = React.useState(0);
+  const [trajectory, setTrajectory] = React.useState<Array<{state: number, action: number | null, reward: number}>>([]);
+  const [explorationStrategy, setExplorationStrategy] = React.useState<'random' | 'greedy' | 'epsilon-greedy'>('random');
   
   React.useEffect(() => {
     if (isPlaying) {
       const interval = setInterval(() => {
-        // Simulate MDP transitions
-        const newAction = Math.floor(Math.random() * 2);
+        const qValues = [0, 1, 2, 10]; // Simple Q-values favoring rightward movement
+        let newAction: number;
+        
+        // Choose action based on exploration strategy
+        switch(explorationStrategy) {
+          case 'greedy':
+            // Always go right towards goal (S3)
+            newAction = currentState < 3 ? 1 : 0;
+            break;
+          case 'epsilon-greedy':
+            // 80% greedy, 20% random
+            if (Math.random() < 0.8) {
+              newAction = currentState < 3 ? 1 : 0; // Greedy choice
+            } else {
+              newAction = Math.floor(Math.random() * 2); // Random choice
+            }
+            break;
+          default: // random
+            newAction = Math.floor(Math.random() * 2);
+        }
+        
         setAction(newAction);
         
         setTimeout(() => {
-          // Transition to new state based on action
           setCurrentState(prev => {
-            if (newAction === 0) return Math.max(0, prev - 1);
-            else return Math.min(3, prev + 1);
+            const nextState = newAction === 0 ? Math.max(0, prev - 1) : Math.min(3, prev + 1);
+            const reward = getReward(nextState);
+            
+            setTotalReward(total => total + reward);
+            setTrajectory(traj => [...traj, { state: nextState, action: newAction, reward }]);
+            setStep(s => s + 1);
+            
+            return nextState;
           });
           setAction(null);
-        }, 500);
+        }, 800);
       }, 2000);
       
       return () => clearInterval(interval);
+    } else {
+      // Reset everything
+      setCurrentState(0);
+      setAction(null);
+      setTotalReward(0);
+      setStep(0);
+      setTrajectory([]);
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentState, explorationStrategy]);
   
   const states = ['S0', 'S1', 'S2', 'S3'];
   const rewards = [-1, 0, 0, 10];
+  const stateDescriptions = [
+    'Start (Penalty)', 
+    'Neutral', 
+    'Almost There', 
+    'Goal! (Reward)'
+  ];
+  
+  const getReward = (state: number) => rewards[state];
   
   return (
-    <div className="text-center">
-      <div className="flex justify-center items-center gap-4 mb-4">
-        {states.map((state, idx) => (
-          <div key={idx} className="relative">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center font-bold text-white transition-all ${
-              currentState === idx ? 'bg-blue-600 scale-110' : 'bg-gray-400'
-            }`}>
-              {state}
-            </div>
-            <div className="text-xs mt-1">r={rewards[idx]}</div>
+    <div className="space-y-4">
+      {/* MDP Explanation */}
+      <div className="bg-gray-100 rounded-lg p-4 text-left">
+        <h4 className="font-semibold mb-2">Markov Decision Process (MDP) Components:</h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="font-semibold text-blue-600">States (S):</span> S0, S1, S2, S3 - Different positions
           </div>
-        ))}
+          <div>
+            <span className="font-semibold text-purple-600">Actions (A):</span> Left ←, Right → - Movement choices
+          </div>
+          <div>
+            <span className="font-semibold text-green-600">Rewards (R):</span> [-1, 0, 0, +10] - Immediate feedback
+          </div>
+          <div>
+            <span className="font-semibold text-orange-600">Transitions:</span> P(s'|s,a) - State changes
+          </div>
+        </div>
+        <div className="mt-2 text-xs text-gray-600">
+          <strong>Goal:</strong> Learn to reach S3 (highest reward) while minimizing time in S0 (penalty)
+        </div>
       </div>
       
-      {action !== null && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-lg font-semibold text-purple-600"
-        >
-          Action: {action === 0 ? '← Left' : 'Right →'}
-        </motion.div>
-      )}
+      {/* Exploration Strategy Selector */}
+      <div className="bg-blue-50 rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold">Exploration Strategy:</label>
+          <select 
+            value={explorationStrategy} 
+            onChange={(e) => setExplorationStrategy(e.target.value as any)}
+            className="text-sm border rounded px-2 py-1"
+            disabled={isPlaying}
+          >
+            <option value="random">Random (Pure Exploration)</option>
+            <option value="greedy">Greedy (Pure Exploitation)</option>
+            <option value="epsilon-greedy">ε-Greedy (80% Greedy, 20% Random)</option>
+          </select>
+        </div>
+        <div className="text-xs text-gray-600">
+          {explorationStrategy === 'random' && "Agent chooses actions randomly - explores but never learns optimal path"}
+          {explorationStrategy === 'greedy' && "Agent always chooses best known action - fast goal reaching but no exploration"}
+          {explorationStrategy === 'epsilon-greedy' && "Agent mostly chooses best action but sometimes explores - balances learning and performance"}
+        </div>
+      </div>
       
-      <div className="mt-4 text-sm text-gray-600">
-        {isPlaying ? (
-          <>
-            <p>Agent at state {states[currentState]}</p>
-            <p>Reward: {rewards[currentState]}</p>
-          </>
-        ) : (
-          <p>Click Play to see MDP transitions in action</p>
+      {/* MDP Visualization */}
+      <div className="bg-white rounded-lg p-4 border">
+        {/* States */}
+        <div className="flex justify-center items-center gap-6 mb-6">
+          {states.map((state, idx) => (
+            <div key={idx} className="relative text-center">
+              {/* Transition arrows */}
+              {idx < states.length - 1 && (
+                <div className="absolute top-1/2 -right-3 transform -translate-y-1/2 z-10">
+                  <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" fill={action === 1 && currentState === idx ? '#8B5CF6' : '#CBD5E1'} />
+                  </svg>
+                </div>
+              )}
+              {idx > 0 && (
+                <div className="absolute top-1/2 -left-3 transform -translate-y-1/2 rotate-180 z-10">
+                  <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" fill={action === 0 && currentState === idx ? '#8B5CF6' : '#CBD5E1'} />
+                  </svg>
+                </div>
+              )}
+              
+              {/* State circle */}
+              <div className={`w-24 h-24 rounded-full flex flex-col items-center justify-center font-bold text-white transition-all border-4 ${
+                currentState === idx ? 'bg-blue-600 scale-110 border-blue-800 shadow-lg' : 'bg-gray-400 border-gray-500'
+              }`}>
+                <div className="text-lg">{state}</div>
+                <div className="text-xs opacity-80">r={rewards[idx]}</div>
+              </div>
+              
+              {/* State description */}
+              <div className="text-xs mt-2 font-medium text-gray-700">
+                {stateDescriptions[idx]}
+              </div>
+              
+              {/* Agent indicator */}
+              {currentState === idx && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                >
+                  🤖
+                </motion.div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {/* Current Action Display */}
+        {action !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center mb-4"
+          >
+            <div className="inline-block bg-purple-100 border-2 border-purple-500 rounded-lg px-4 py-2">
+              <div className="text-lg font-semibold text-purple-700">
+                Taking Action: {action === 0 ? '← Left' : 'Right →'}
+              </div>
+              <div className="text-sm text-purple-600">
+                Strategy: {explorationStrategy}
+              </div>
+            </div>
+          </motion.div>
         )}
+        
+        {/* Statistics */}
+        <div className="grid grid-cols-3 gap-4 text-center bg-gray-50 rounded p-3">
+          <div>
+            <div className="text-2xl font-bold text-blue-600">{step}</div>
+            <div className="text-xs text-gray-600">Steps Taken</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-green-600">{totalReward}</div>
+            <div className="text-xs text-gray-600">Total Reward</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-orange-600">
+              {trajectory.filter(t => t.state === 3).length}
+            </div>
+            <div className="text-xs text-gray-600">Goal Reached</div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Learning Insights */}
+      <div className="text-center space-y-2">
+        <p className="text-sm font-semibold text-gray-700">
+          {!isPlaying && "This MDP teaches how agents learn to make sequential decisions"}
+          {isPlaying && step === 0 && "Agent starting exploration..."}
+          {isPlaying && step > 0 && step < 5 && "Learning state transitions and rewards..."}
+          {isPlaying && step >= 5 && totalReward > 20 && "Agent is finding the goal efficiently!"}
+          {isPlaying && step >= 5 && totalReward <= 0 && "Agent struggling - needs better strategy"}
+        </p>
+        <p className="text-xs text-gray-500">
+          The Markov Property: Next state depends only on current state + action (not history)
+        </p>
       </div>
     </div>
   );

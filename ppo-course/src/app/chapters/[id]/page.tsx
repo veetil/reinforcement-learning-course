@@ -131,14 +131,43 @@ Modern optimizers like Adam and RMSprop build upon these foundations with adapti
         title: '2.1 Markov Decision Process',
         content: `A Markov Decision Process (MDP) is the mathematical framework for modeling sequential decision-making problems in RL.
 
-An MDP consists of:
-- **State Space (S)**: All possible states the agent can be in
-- **Action Space (A)**: All possible actions the agent can take
-- **Transition Function P(s'|s,a)**: Probability of reaching state s' from state s by taking action a
-- **Reward Function R(s,a,s')**: Immediate reward for transitions
-- **Discount Factor γ**: Balances immediate vs. future rewards
+**An MDP consists of five key components:**
 
-The Markov property states that the future depends only on the current state, not the history.`
+**1. State Space (S)**: 
+- All possible situations/configurations the agent can encounter
+- Examples: robot position, game board state, sensor readings
+- Can be discrete (finite states) or continuous (infinite states)
+
+**2. Action Space (A)**: 
+- All possible decisions/moves the agent can make
+- Examples: move left/right, buy/sell, accelerate/brake
+- Can be discrete (finite actions) or continuous (infinite actions)
+
+**3. Transition Function P(s'|s,a)**: 
+- Probability of moving from state s to state s' when taking action a
+- Captures environment dynamics and uncertainty
+- Example: P(sunny tomorrow | sunny today, no_action) = 0.8
+- For deterministic environments: P(s'|s,a) = 1 for one specific s', 0 for all others
+
+**4. Reward Function R(s,a,s')**: 
+- Immediate numerical feedback for state transitions
+- Defines what the agent should optimize for
+- Examples: +10 for reaching goal, -1 for each step, -100 for collision
+- Can depend on current state, action taken, and/or resulting state
+
+**5. Discount Factor γ ∈ [0,1]**: 
+- Balances immediate vs. future rewards
+- γ = 0: only care about immediate rewards (myopic)
+- γ = 1: future rewards matter as much as immediate ones
+- γ = 0.9: common choice that values future but emphasizes near-term
+
+**The Markov Property:**
+The future state depends only on the current state and action, not on the sequence of past states and actions. This means the current state contains all information needed to make optimal decisions.
+
+**Mathematical Formulation:**
+P(S_{t+1} = s' | S_t = s, A_t = a, S_{t-1}, A_{t-1}, ..., S_0, A_0) = P(S_{t+1} = s' | S_t = s, A_t = a)
+
+This assumption enables efficient algorithms by avoiding the need to track entire histories.`
       },
       {
         id: 'policies',
@@ -160,32 +189,94 @@ Policy representation can be:
         title: '2.3 Reward Design',
         content: `Rewards are the feedback signals that guide learning. Good reward design is crucial for successful RL.
 
-Key concepts:
-- **Immediate Reward**: r_t received at time t
-- **Return (G_t)**: Sum of discounted future rewards
-- **Sparse vs. Dense Rewards**: Frequency of non-zero rewards
-- **Reward Shaping**: Engineering rewards to guide learning
+**Key Concepts:**
 
-Common pitfalls:
-- Reward hacking: Agent finds unintended shortcuts
-- Sparse rewards: Makes learning difficult
-- Conflicting objectives: Multiple reward signals that contradict`
+**Immediate Reward (r_t)**: The numerical feedback received at time step t
+- Directly influences what the agent learns to do
+- Should align with the true objective you want to optimize
+
+**Return (G_t)**: The cumulative discounted future rewards from time t
+- G_t = r_{t+1} + γr_{t+2} + γ²r_{t+3} + ...
+- What the agent actually tries to maximize
+
+**Sparse vs. Dense Rewards:**
+
+**Sparse Rewards**: 
+- Non-zero rewards are rare (e.g., only at episode end)
+- Examples: +1 for winning a game, 0 otherwise; +100 for reaching goal, 0 for all other steps
+- Pros: Simple to design, closely matches true objective
+- Cons: Very difficult to learn from, requires extensive exploration
+
+**Dense Rewards**: 
+- Frequent non-zero rewards (e.g., every time step)
+- Examples: distance to goal, intermediate progress milestones
+- Pros: Easier to learn from, provides continuous guidance
+- Cons: Risk of reward hacking, may not match true objective
+
+**Reward Shaping**: 
+Carefully engineering intermediate rewards to guide learning without changing the optimal policy
+- Example: In navigation, give small rewards for moving toward the goal
+- Must be done carefully to avoid unintended behaviors
+- Potential-based shaping is theoretically safe: F(s,s') = γΦ(s') - Φ(s)
+
+**Common Pitfalls:**
+
+**Reward Hacking**: Agent exploits reward function in unintended ways
+- Example: Racing game where agent drives in circles to collect lap bonuses
+- Solution: Carefully consider all possible strategies, test extensively
+
+**Conflicting Objectives**: Multiple reward signals that contradict each other
+- Example: Speed vs. safety in autonomous driving
+- Solution: Careful weight balancing or hierarchical approaches
+
+**Misaligned Rewards**: Reward doesn't match true objective
+- Example: Cleaning robot gets reward for moving dust around instead of collecting it
+- Solution: Direct measurement of true outcomes when possible`
       },
       {
         id: 'exploration',
         title: '2.4 Exploration vs. Exploitation',
         content: `The exploration-exploitation dilemma is fundamental in RL: should the agent try new actions (explore) or stick with known good actions (exploit)?
 
-Common strategies:
-- **ε-greedy**: Random action with probability ε
-- **Boltzmann/Softmax**: Sample based on action values
-- **Upper Confidence Bound (UCB)**: Optimism in face of uncertainty
-- **Thompson Sampling**: Bayesian approach
+**Why This Matters:**
+Pure exploitation leads to suboptimal policies (getting stuck in local optima), while pure exploration never converges to good behavior. The key is balancing both.
 
-In deep RL, exploration is often achieved through:
-- Entropy regularization
-- Intrinsic motivation
-- Curiosity-driven exploration`
+**Core Exploration Strategies:**
+
+**1. ε-Greedy Exploration**
+- With probability ε: choose random action (explore)
+- With probability 1-ε: choose best known action (exploit)
+- Simple and effective, widely used in practice
+- Example: ε=0.1 means 10% random actions, 90% greedy actions
+- Pros: Simple, guaranteed exploration
+- Cons: Uniform random exploration (doesn't consider action quality)
+
+**2. Boltzmann/Softmax Exploration**
+- Sample actions based on their estimated values using softmax distribution
+- Formula: P(a) = exp(Q(a)/τ) / Σ exp(Q(a')/τ)
+- Temperature τ controls exploration: high τ = more random, low τ = more greedy
+- Pros: Better actions have higher selection probability
+- Cons: Can be computationally expensive, sensitive to temperature tuning
+
+**3. Upper Confidence Bound (UCB)**
+- Select actions based on: Q(a) + c√(ln(t)/N(a))
+- Where N(a) is count of times action a was taken
+- "Optimism in face of uncertainty" - prefers less-tried actions
+- Pros: Principled approach, good theoretical guarantees
+- Cons: Requires action count tracking, mainly for bandits
+
+**4. Thompson Sampling**
+- Bayesian approach: maintain probability distributions over action values
+- Sample from these distributions to choose actions
+- Naturally balances exploration and exploitation
+- Pros: Theoretically optimal, adapts exploration automatically
+- Cons: More complex implementation, requires Bayesian framework
+
+**Advanced Deep RL Exploration:**
+
+**Entropy Regularization**: Add entropy bonus to encourage diverse actions
+**Intrinsic Motivation**: Reward agent for visiting novel states or taking diverse actions
+**Curiosity-Driven**: Reward prediction errors to encourage exploration of unpredictable regions`
       }
     ],
     quiz: [
