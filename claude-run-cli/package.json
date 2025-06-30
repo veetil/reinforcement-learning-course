@@ -1,0 +1,36 @@
+{
+  "name": "claude-run-cli",
+  "version": "2.1.0",
+  "description": "Enhanced Development System for Claude - Combines SPARC methodology with iterative planning",
+  "main": "cli.js",
+  "bin": {
+    "claude-run-cli": "cli.js"
+  },
+  "files": [
+    "cli.js",
+    "claude-run.sh",
+    "mcp.json",
+    "claude-run-guide.md"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "claude",
+    "cli",
+    "development",
+    "sparc",
+    "ai",
+    "workflow"
+  ],
+  "author": "veetil",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/claude-run-cli.git"
+  }
+}

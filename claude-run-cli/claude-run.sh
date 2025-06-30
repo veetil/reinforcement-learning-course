@@ -137,7 +137,7 @@ PHASES:
     6. Integration & Testing   - Comprehensive testing and quality assurance
     7. Deployment             - Production readiness and deployment
 
-For more information, see CLAUDE-RUN-GUIDE.md
+For more information, see claude-run-guide.md
 EOF
 }
 

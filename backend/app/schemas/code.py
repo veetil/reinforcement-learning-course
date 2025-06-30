@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 class TestCase(BaseModel):
@@ -32,5 +32,5 @@ class ExecutionResult(BaseModel):
     
 class CodeValidation(BaseModel):
     valid: bool
-    errors: List[Dict[str, any]] = []
-    warnings: List[Dict[str, any]] = []
+    errors: List[Dict[str, Any]] = []
+    warnings: List[Dict[str, Any]] = []
